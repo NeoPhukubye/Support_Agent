@@ -1,0 +1,99 @@
+TROUBLESHOOTING GUIDE - SupportAI Technical Support
+
+=== CONNECTION ISSUES ===
+
+Problem: Cannot connect to SupportAI
+Steps:
+1. Check your internet connection by visiting another website.
+2. Visit status.supportai.com to check for known outages.
+3. Try clearing your DNS cache: run "ipconfig /flushdns" (Windows) or "sudo dscacheutil -flushcache" (Mac).
+4. Try disabling your VPN if you are using one.
+5. Check if your firewall is blocking ports 80 and 443.
+6. Try from a different network (mobile hotspot) to isolate the issue.
+
+Problem: API requests timing out
+Steps:
+1. Check the API status at status.supportai.com/api.
+2. Ensure your API key is valid and not expired (Settings > Developer > API Keys).
+3. Check if you are hitting rate limits (Free: 100 req/min, Pro: 1000 req/min, Enterprise: unlimited).
+4. Implement exponential backoff retry logic in your code.
+5. If using webhooks, verify your endpoint responds within 10 seconds.
+
+=== LOGIN ISSUES ===
+
+Problem: Forgot password
+Steps:
+1. Click "Forgot Password" on the login page.
+2. Enter the email address associated with your account.
+3. Check your inbox (and spam folder) for the reset email.
+4. Click the link within 24 hours — it expires after that.
+5. Create a new password (min 8 characters, must include a number and symbol).
+
+Problem: Account locked
+Accounts are locked after 5 failed login attempts. Lockout duration: 15 minutes.
+Steps:
+1. Wait 15 minutes and try again.
+2. Use "Forgot Password" to reset credentials.
+3. Contact support if you believe your account was compromised.
+
+Problem: Two-factor authentication (2FA) not working
+Steps:
+1. Ensure your device's time is synchronized (2FA codes are time-sensitive).
+2. Try generating a new code — codes expire every 30 seconds.
+3. If you lost access to your authenticator app, use a backup code (saved during 2FA setup).
+4. Contact support with your account email and government-issued ID for account recovery.
+
+=== PERFORMANCE ISSUES ===
+
+Problem: Dashboard is slow or unresponsive
+Steps:
+1. Hard refresh the page (Ctrl+Shift+R on Windows, Cmd+Shift+R on Mac).
+2. Clear browser cache and cookies.
+3. Disable browser extensions (especially ad blockers).
+4. Try a different browser (Chrome, Firefox, Edge, Safari all supported).
+5. Check available RAM — SupportAI requires at least 4GB free memory.
+6. If on a company network, ask IT if there is any traffic shaping or proxy interference.
+
+Problem: File uploads failing
+Steps:
+1. Check file size limits: Free (10MB), Pro (100MB), Enterprise (unlimited).
+2. Ensure the file type is supported: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, GIF, MP4, ZIP.
+3. Try uploading from a different browser.
+4. Check your network speed — uploads require at least 1 Mbps stable connection.
+5. If uploading via API, ensure multipart/form-data content type is set correctly.
+
+=== INTEGRATION ISSUES ===
+
+Problem: Slack integration not posting notifications
+Steps:
+1. Verify the SupportAI app is installed in your Slack workspace.
+2. Check that the bot has permission to post in the target channel.
+3. Go to Settings > Integrations > Slack > Reconnect to refresh the OAuth token.
+4. Check if the channel is private — the bot needs to be explicitly invited to private channels.
+
+Problem: Email notifications not being received
+Steps:
+1. Check spam/junk folder.
+2. Add support@supportai.com and notifications@supportai.com to your contacts/whitelist.
+3. Check your notification settings at Settings > Notifications.
+4. Ask your IT team to whitelist SupportAI's sending IPs: 54.240.0.0/18 and 205.251.0.0/16.
+5. Check if your inbox is full — full inboxes reject incoming emails.
+
+=== DATA & EXPORT ISSUES ===
+
+Problem: Data export not received
+Steps:
+1. Check spam/junk folder for the download link email.
+2. Export links expire after 24 hours — re-request if expired.
+3. Exports over 1GB may take up to 2 hours — wait and check again.
+4. Ensure the email address in Settings > Profile is correct and accessible.
+
+=== ERROR CODES REFERENCE ===
+
+400 Bad Request: Invalid input data. Check your request parameters.
+401 Unauthorized: Invalid or expired API key. Regenerate from Settings > Developer.
+403 Forbidden: Insufficient permissions. Contact your account admin.
+404 Not Found: Resource does not exist or was deleted.
+429 Too Many Requests: Rate limit exceeded. Wait before retrying. Check plan limits.
+500 Internal Server Error: Server-side issue. Note the time and contact support.
+503 Service Unavailable: Temporary outage. Check status.supportai.com.

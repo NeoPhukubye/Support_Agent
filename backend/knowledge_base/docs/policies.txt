@@ -1,0 +1,86 @@
+COMPANY POLICIES - SupportAI
+
+=== REFUND POLICY ===
+
+30-Day Money-Back Guarantee:
+All new subscriptions are eligible for a full refund within 30 days of the initial purchase. To request a refund, contact support@supportai.com with your account email and order number. Refunds are processed within 5-7 business days to your original payment method.
+
+Partial Refunds:
+For cancellations after 30 days, we do not offer partial refunds. Your access will continue until the end of the current billing period.
+
+Add-on Purchases:
+One-time add-on purchases (extra storage, premium features) are non-refundable after 7 days.
+
+=== PRIVACY POLICY (SUMMARY) ===
+
+Data Collection:
+We collect account information, usage data, and support interactions to provide and improve our services.
+
+Data Storage:
+All data is stored in AWS data centers with AES-256 encryption at rest and TLS 1.3 in transit.
+
+Data Sharing:
+We never sell your data. We only share with third parties necessary to deliver our service (payment processors, cloud infrastructure).
+
+Data Retention:
+Active account data: retained while account is active.
+Deleted account data: permanently removed within 30 days.
+Backup data: purged within 90 days.
+
+GDPR/CCPA Compliance:
+We are fully GDPR and CCPA compliant. You can request data export or deletion at any time through Settings > Privacy.
+
+=== SERVICE LEVEL AGREEMENT (SLA) ===
+
+Uptime Guarantee:
+- Enterprise plan: 99.99% uptime SLA
+- Pro plan: 99.9% uptime SLA
+- Free plan: No SLA (best effort)
+
+Support Response Times:
+- Critical (service down): 1 hour response, Enterprise only
+- High (major feature broken): 4 hours, Pro and Enterprise
+- Medium (minor issue): 24 hours, all paid plans
+- Low (questions): 48 hours, all paid plans
+
+Scheduled Maintenance:
+Maintenance windows are Sundays 2:00 AM - 4:00 AM UTC. We notify customers 48 hours in advance via email and status page.
+
+=== ACCEPTABLE USE POLICY ===
+
+Prohibited activities:
+- Using the service for illegal purposes
+- Sending spam or unsolicited communications
+- Attempting to hack, scrape, or reverse-engineer the platform
+- Sharing account credentials with unauthorized users
+- Uploading malicious files or malware
+
+Violations:
+First offense: Warning and content removal.
+Second offense: Temporary account suspension (7 days).
+Third offense: Permanent account termination without refund.
+
+=== PRICING PLANS ===
+
+Free Plan: $0/month
+- Up to 3 users
+- 100 tickets/month
+- Email support only
+- 1GB storage
+
+Pro Plan: $29/month per user
+- Unlimited users
+- Unlimited tickets
+- Priority email + chat support
+- 100GB storage
+- All integrations
+- API access
+
+Enterprise Plan: Custom pricing
+- Everything in Pro
+- Dedicated account manager
+- 99.99% SLA
+- SSO/SAML support
+- Custom integrations
+- On-premise deployment option
+- 24/7 phone support

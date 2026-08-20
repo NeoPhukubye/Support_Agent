@@ -1,0 +1,69 @@
+FREQUENTLY ASKED QUESTIONS - SupportAI Help Center
+
+=== BILLING ===
+
+Q: How do I update my payment method?
+A: Log in to your account, go to Settings > Billing > Payment Methods. Click "Add Payment Method" and enter your new card details. You can set it as default and remove old cards from there.
+
+Q: Why was I charged twice?
+A: Double charges are usually temporary authorization holds that clear within 3-5 business days. If the charge persists, please contact our billing team with your transaction ID and we'll issue a refund immediately.
+
+Q: How do I cancel my subscription?
+A: Go to Settings > Subscription > Cancel Plan. You'll retain access until the end of your current billing period. We'll send a confirmation email once cancellation is processed.
+
+Q: Can I get a refund?
+A: We offer a 30-day money-back guarantee for all new subscriptions. For cancellations within 30 days, contact support with your account email and order number for a full refund.
+
+Q: How do I download my invoice?
+A: Go to Settings > Billing > Invoice History. Click the download icon next to any invoice to get a PDF copy.
+
+=== TECHNICAL ISSUES ===
+
+Q: The app won't load or is very slow.
+A: Try these steps: 1) Clear your browser cache and cookies. 2) Try a different browser. 3) Disable browser extensions. 4) Check our status page at status.supportai.com. If the issue persists, contact support with your browser version and OS.
+
+Q: I can't log in to my account.
+A: Click "Forgot Password" on the login page to reset your password. If you don't receive the reset email within 5 minutes, check your spam folder. If still locked out, contact support with your account email.
+
+Q: How do I reset my password?
+A: Click "Forgot Password" on the login page, enter your email address, and we'll send a reset link. The link expires in 24 hours.
+
+Q: The integration with Slack isn't working.
+A: Disconnect and reconnect the Slack integration from Settings > Integrations > Slack. Make sure you have admin permissions in your Slack workspace. Re-authorize the OAuth connection.
+
+Q: I'm getting error code 500.
+A: This is a server-side error. Please note the exact time it occurred and any actions you were taking, then contact our technical support team. We'll investigate on our end.
+
+Q: How do I export my data?
+A: Go to Settings > Data > Export. Select the date range and format (CSV or JSON). You'll receive a download link via email within 1 hour.
+
+=== ACCOUNT MANAGEMENT ===
+
+Q: How do I change my email address?
+A: Go to Settings > Profile > Email. Enter your new email and we'll send a verification link to confirm the change.
+
+Q: How do I add team members?
+A: Go to Settings > Team > Invite Members. Enter their email addresses and select their role (Admin, Member, or Viewer). They'll receive an invitation email.
+
+Q: How do I upgrade my plan?
+A: Go to Settings > Subscription > Upgrade Plan. Compare features and pricing, then click "Upgrade" on your preferred plan. The change takes effect immediately.
+
+Q: How do I delete my account?
+A: Account deletion is permanent. Go to Settings > Account > Delete Account. You'll be asked to confirm by typing your email. All data will be permanently deleted within 30 days.
+
+Q: I didn't receive my verification email.
+A: Check your spam/junk folder. If not there, click "Resend verification email" on the login page. Make sure you're checking the email address you registered with.
+
+=== FEATURES ===
+
+Q: What integrations do you support?
+A: We support Slack, Microsoft Teams, Jira, GitHub, Salesforce, HubSpot, Zendesk, and 50+ others. Check our integrations page for the full list.
+
+Q: Is there a mobile app?
+A: Yes! Download our app from the Apple App Store or Google Play Store. Search for "SupportAI" and install the official app.
+
+Q: Do you offer an API?
+A: Yes, we have a REST API available on all paid plans. Documentation is at docs.supportai.com/api. You can generate API keys from Settings > Developer > API Keys.
+
+Q: What are the file upload limits?
+A: Free plan: 10MB per file, 1GB total storage. Pro plan: 100MB per file, 100GB total. Enterprise: unlimited.
