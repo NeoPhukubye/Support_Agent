@@ -23,6 +23,60 @@ const SUGGESTIONS = [
   "I need a refund",
 ]
 
+const AUTOCOMPLETE_SUGGESTIONS = [
+  "I can't log into my account",
+  "How do I cancel my subscription?",
+  "I was charged twice this month",
+  "Check ticket status",
+  "The app is loading very slowly",
+  "I need a refund",
+  "How do I reset my password?",
+  "Where can I find my invoice?",
+  "How do I update my payment method?",
+  "I want to upgrade my plan",
+  "I want to downgrade my plan",
+  "How long does shipping take?",
+  "My order hasn't arrived",
+  "I received the wrong item",
+  "How do I return a product?",
+  "I need to change my email address",
+  "How do I delete my account?",
+  "I'm getting an error message",
+  "The app keeps crashing",
+  "I can't connect to the service",
+  "My data is missing",
+  "I was charged the wrong amount",
+  "How do I contact a human agent?",
+  "I need urgent help",
+  "What are your support hours?",
+  "How do I export my data?",
+  "I forgot my username",
+  "How do I enable two-factor authentication?",
+  "I think my account was hacked",
+  "I need to cancel my order",
+]
+
+function SuggestionDropdown({ suggestions, activeIndex, onSelect, onHover }) {
+  if (suggestions.length === 0) return null
+  return (
+    <ul className="autocomplete-dropdown" role="listbox">
+      {suggestions.map((s, i) => (
+        <li
+          key={s}
+          role="option"
+          aria-selected={i === activeIndex}
+          className={`autocomplete-item${i === activeIndex ? ' active' : ''}`}
+          onMouseDown={e => { e.preventDefault(); onSelect(s) }}
+          onMouseEnter={() => onHover(i)}
+        >
+          <Search size={12} className="autocomplete-icon" />
+          {s}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function TypingIndicator() {
   return (
     <div className="typing-indicator">
@@ -114,6 +168,8 @@ export default function App() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [suggestions, setSuggestions] = useState([])
+  const [activeSuggestion, setActiveSuggestion] = useState(-1)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -125,6 +181,8 @@ export default function App() {
     const content = text || input.trim()
     if (!content || loading) return
     setInput('')
+    setSuggestions([])
+    setActiveSuggestion(-1)
 
     const userMsg = { role: 'user', content, timestamp: Date.now() }
     setMessages(prev => [...prev, userMsg])
@@ -155,7 +213,52 @@ export default function App() {
     setLoading(false)
   }
 
+  const handleInputChange = (e) => {
+    const val = e.target.value
+    setInput(val)
+    if (val.trim().length >= 2) {
+      const lower = val.toLowerCase()
+      const filtered = AUTOCOMPLETE_SUGGESTIONS.filter(s =>
+        s.toLowerCase().includes(lower)
+      ).slice(0, 6)
+      setSuggestions(filtered)
+      setActiveSuggestion(-1)
+    } else {
+      setSuggestions([])
+      setActiveSuggestion(-1)
+    }
+  }
+
+  const handleSuggestionSelect = (s) => {
+    setInput(s)
+    setSuggestions([])
+    setActiveSuggestion(-1)
+    inputRef.current?.focus()
+  }
+
   const handleKey = (e) => {
+    if (suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setActiveSuggestion(i => Math.min(i + 1, suggestions.length - 1))
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setActiveSuggestion(i => Math.max(i - 1, -1))
+        return
+      }
+      if (e.key === 'Escape') {
+        setSuggestions([])
+        setActiveSuggestion(-1)
+        return
+      }
+      if (e.key === 'Tab' || (e.key === 'Enter' && activeSuggestion >= 0)) {
+        e.preventDefault()
+        handleSuggestionSelect(suggestions[activeSuggestion] ?? suggestions[0])
+        return
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
@@ -249,21 +352,31 @@ export default function App() {
             </div>
 
             <div className="chat-input-area">
-              <div className="input-wrapper">
-                <textarea
-                  ref={inputRef}
-                  className="chat-input"
-                  placeholder="Ask a question or describe your issue..."
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKey}
-                  rows={1}
+              <div className="input-container">
+                <SuggestionDropdown
+                  suggestions={suggestions}
+                  activeIndex={activeSuggestion}
+                  onSelect={handleSuggestionSelect}
+                  onHover={setActiveSuggestion}
                 />
-                <button className="send-btn" onClick={() => sendMessage()} disabled={!input.trim() || loading}>
-                  <Send size={15} />
-                </button>
+                <div className="input-wrapper">
+                  <textarea
+                    ref={inputRef}
+                    className="chat-input"
+                    placeholder="Ask a question or describe your issue..."
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKey}
+                    rows={1}
+                    aria-autocomplete="list"
+                    aria-expanded={suggestions.length > 0}
+                  />
+                  <button className="send-btn" onClick={() => sendMessage()} disabled={!input.trim() || loading}>
+                    <Send size={15} />
+                  </button>
+                </div>
               </div>
-              <div className="input-hint">Press Enter to send · Shift+Enter for new line</div>
+              <div className="input-hint">Press Enter to send · Shift+Enter for new line · ↑↓ to navigate suggestions</div>
             </div>
           </>
         )}
