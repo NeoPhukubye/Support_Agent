@@ -1,7 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import {
   MessageSquare, Ticket, RefreshCw, Send, Plus,
-  Bot, Zap, Search, FileText, AlertTriangle, CheckCircle
+  Bot, Zap, Search, FileText, AlertTriangle, CheckCircle,
+  Menu, X, AlertCircle, RotateCcw,
 } from 'lucide-react'
 
 const API = 'http://localhost:8000'
@@ -56,6 +59,44 @@ const AUTOCOMPLETE_SUGGESTIONS = [
   "I need to cancel my order",
 ]
 
+// ── Markdown renderer ──────────────────────────────────────────────────────────
+
+function MarkdownContent({ content }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        // Inline code
+        code({ node, inline, className, children, ...props }) {
+          return inline ? (
+            <code className="md-code-inline" {...props}>{children}</code>
+          ) : (
+            <pre className="md-code-block"><code {...props}>{children}</code></pre>
+          )
+        },
+        // Links open in new tab
+        a({ href, children }) {
+          return <a href={href} target="_blank" rel="noopener noreferrer" className="md-link">{children}</a>
+        },
+        p({ children }) { return <p className="md-p">{children}</p> },
+        ul({ children }) { return <ul className="md-ul">{children}</ul> },
+        ol({ children }) { return <ol className="md-ol">{children}</ol> },
+        li({ children }) { return <li className="md-li">{children}</li> },
+        strong({ children }) { return <strong className="md-strong">{children}</strong> },
+        h1({ children }) { return <h1 className="md-h">{children}</h1> },
+        h2({ children }) { return <h2 className="md-h">{children}</h2> },
+        h3({ children }) { return <h3 className="md-h">{children}</h3> },
+        blockquote({ children }) { return <blockquote className="md-blockquote">{children}</blockquote> },
+        hr() { return <hr className="md-hr" /> },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  )
+}
+
+// ── Autocomplete dropdown ──────────────────────────────────────────────────────
+
 function SuggestionDropdown({ suggestions, activeIndex, onSelect, onHover }) {
   if (suggestions.length === 0) return null
   return (
@@ -77,6 +118,8 @@ function SuggestionDropdown({ suggestions, activeIndex, onSelect, onHover }) {
   )
 }
 
+// ── Typing indicator ───────────────────────────────────────────────────────────
+
 function TypingIndicator() {
   return (
     <div className="typing-indicator">
@@ -90,17 +133,53 @@ function TypingIndicator() {
   )
 }
 
-function Message({ msg }) {
-  const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+// ── Streaming tool badge row ───────────────────────────────────────────────────
+
+function StreamingTools({ tools }) {
+  if (!tools.length) return null
   return (
-    <div className={`message ${msg.role}`}>
+    <div className="tools-used streaming-tools">
+      {tools.map((t, i) => (
+        <span key={i} className="tool-badge tool-badge-live">
+          <span className="tool-pulse" />
+          {TOOL_ICONS[t] || '⚙️'} {t.replace(/_/g, ' ')}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// ── Message ────────────────────────────────────────────────────────────────────
+
+function Message({ msg, onRetry }) {
+  const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const isError = msg.isError
+
+  return (
+    <div className={`message ${msg.role}${isError ? ' message-error' : ''}`}>
       <div className="message-avatar">
         {msg.role === 'assistant' ? '🤖' : '👤'}
       </div>
       <div className="message-content">
-        <div className="message-bubble">{msg.content}</div>
+        <div className={`message-bubble${isError ? ' bubble-error' : ''}`}>
+          {msg.role === 'assistant' && !isError ? (
+            <MarkdownContent content={msg.content} />
+          ) : isError ? (
+            <div className="error-content">
+              <AlertCircle size={16} className="error-icon" />
+              <span>{msg.content}</span>
+            </div>
+          ) : (
+            <span>{msg.content}</span>
+          )}
+        </div>
         <div className="message-meta">
           <span className="message-time">{time}</span>
+          {isError && onRetry && (
+            <button className="retry-btn" onClick={onRetry} title="Retry">
+              <RotateCcw size={12} /> Retry
+            </button>
+          )}
         </div>
         {msg.tools_used?.length > 0 && (
           <div className="tools-used">
@@ -115,6 +194,8 @@ function Message({ msg }) {
     </div>
   )
 }
+
+// ── Tickets panel ──────────────────────────────────────────────────────────────
 
 function TicketsPanel() {
   const [tickets, setTickets] = useState([])
@@ -163,6 +244,8 @@ function TicketsPanel() {
   )
 }
 
+// ── Main App ───────────────────────────────────────────────────────────────────
+
 export default function App() {
   const [view, setView] = useState('chat')
   const [messages, setMessages] = useState([])
@@ -170,47 +253,130 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [activeSuggestion, setActiveSuggestion] = useState(-1)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Streaming state
+  const [streamingContent, setStreamingContent] = useState('')
+  const [streamingTools, setStreamingTools] = useState([])
+  const [isStreaming, setIsStreaming] = useState(false)
+
+  // Last user message for retry
+  const lastUserMessageRef = useRef(null)
+
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
+  }, [messages, loading, streamingContent])
 
-  const sendMessage = async (text) => {
-    const content = text || input.trim()
-    if (!content || loading) return
+  // Auto-resize textarea
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+  }, [input])
+
+  // Close sidebar on mobile when navigating
+  const navigate = (v) => {
+    setView(v)
+    setSidebarOpen(false)
+  }
+
+  const sendMessage = useCallback(async (text) => {
+    const content = (text || input).trim()
+    if (!content || loading || isStreaming) return
     setInput('')
     setSuggestions([])
     setActiveSuggestion(-1)
 
     const userMsg = { role: 'user', content, timestamp: Date.now() }
+    lastUserMessageRef.current = content
+
     setMessages(prev => [...prev, userMsg])
-    setLoading(true)
+    setIsStreaming(true)
+    setStreamingContent('')
+    setStreamingTools([])
+
+    const history = messages.map(m => ({ role: m.role, content: m.content }))
 
     try {
-      const history = messages.map(m => ({ role: m.role, content: m.content }))
-      const r = await fetch(`${API}/chat`, {
+      const response = await fetch(`${API}/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: content, history }),
       })
-      const data = await r.json()
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`)
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let accumulated = ''
+      let toolsUsed = []
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (!raw) continue
+
+          let event
+          try { event = JSON.parse(raw) } catch { continue }
+
+          if (event.type === 'token') {
+            accumulated += event.content
+            setStreamingContent(accumulated)
+          } else if (event.type === 'tool') {
+            toolsUsed = [...toolsUsed, event.name]
+            setStreamingTools([...toolsUsed])
+          } else if (event.type === 'done') {
+            toolsUsed = event.tools_used ?? toolsUsed
+          } else if (event.type === 'error') {
+            throw new Error(event.detail)
+          }
+        }
+      }
+
+      // Commit streamed message
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: data.response,
-        tools_used: data.tools_used,
+        content: accumulated || '(no response)',
+        tools_used: toolsUsed,
         timestamp: Date.now(),
       }])
     } catch (e) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '⚠️ Connection error. Make sure the backend is running on port 8000.',
+        content: 'Connection error — make sure the backend is running on port 8000.',
         tools_used: [],
         timestamp: Date.now(),
+        isError: true,
       }])
     }
+
+    setIsStreaming(false)
+    setStreamingContent('')
+    setStreamingTools([])
     setLoading(false)
+  }, [input, messages, loading, isStreaming])
+
+  const handleRetry = () => {
+    if (lastUserMessageRef.current) {
+      // Remove the last error message
+      setMessages(prev => prev.filter((_, i) => i !== prev.length - 1))
+      sendMessage(lastUserMessageRef.current)
+    }
   }
 
   const handleInputChange = (e) => {
@@ -265,27 +431,39 @@ export default function App() {
     }
   }
 
+  const charCount = input.length
+  const overLimit = charCount > 2000
+
   return (
     <div className="app">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <div className="sidebar">
+      <div className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
         <div className="sidebar-header">
           <div className="logo">
             <div className="logo-icon">🤖</div>
             <h1>SupportAI</h1>
           </div>
           <div className="logo-subtitle">Powered by Agentic AI</div>
+          {/* Close button — mobile only */}
+          <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)} aria-label="Close menu">
+            <X size={18} />
+          </button>
         </div>
 
         <div className="sidebar-section">
-          <button className="new-chat-btn" onClick={() => { setMessages([]); setView('chat') }}>
+          <button className="new-chat-btn" onClick={() => { setMessages([]); navigate('chat') }}>
             <Plus size={15} /> New Conversation
           </button>
           <div className="sidebar-section-title">Navigation</div>
-          <div className={`nav-item ${view === 'chat' ? 'active' : ''}`} onClick={() => setView('chat')}>
+          <div className={`nav-item ${view === 'chat' ? 'active' : ''}`} onClick={() => navigate('chat')}>
             <MessageSquare size={15} /> Chat with Alex
           </div>
-          <div className={`nav-item ${view === 'tickets' ? 'active' : ''}`} onClick={() => setView('tickets')}>
+          <div className={`nav-item ${view === 'tickets' ? 'active' : ''}`} onClick={() => navigate('tickets')}>
             <Ticket size={15} /> Tickets
           </div>
         </div>
@@ -299,39 +477,57 @@ export default function App() {
             { icon: <CheckCircle size={13}/>, label: 'Status Lookup' },
             { icon: <Zap size={13}/>, label: 'Issue Classification' },
           ].map(({ icon, label }) => (
-            <div className="nav-item" key={label}>
-              {icon} {label}
-            </div>
+            <div className="nav-item" key={label}>{icon} {label}</div>
           ))}
         </div>
 
         <div className="sidebar-footer">
           <div className="status-indicator">
             <div className="status-dot" />
-            Alex is online — LLaMA 3 70B via Groq
+            {/* Task 1 fix: accurate branding — Bedrock Claude, not Groq/LLaMA */}
+            Alex is online — Claude 3.5 via Bedrock
           </div>
         </div>
       </div>
 
-      {/* Main */}
+      {/* Main content */}
       <div className="chat-area">
         {view === 'tickets' ? (
-          <TicketsPanel />
+          <>
+            {/* Mobile header for tickets view */}
+            <div className="chat-header">
+              <div className="chat-header-left">
+                <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+                  <Menu size={18} />
+                </button>
+                <div className="agent-info">
+                  <h2>Support Tickets</h2>
+                </div>
+              </div>
+            </div>
+            <TicketsPanel />
+          </>
         ) : (
           <>
             <div className="chat-header">
               <div className="chat-header-left">
+                <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+                  <Menu size={18} />
+                </button>
                 <div className="agent-avatar">🤖</div>
                 <div className="agent-info">
                   <h2>Alex — AI Support Agent</h2>
-                  <p><span style={{width:6,height:6,borderRadius:'50%',background:'#10b981',display:'inline-block'}}/>  Online · Typically replies instantly</p>
+                  <p>
+                    <span style={{width:6,height:6,borderRadius:'50%',background:'#10b981',display:'inline-block'}}/>
+                    &nbsp;Online · Typically replies instantly
+                  </p>
                 </div>
               </div>
               <Bot size={18} style={{ color: 'var(--text-muted)' }} />
             </div>
 
             <div className="chat-messages">
-              {messages.length === 0 ? (
+              {messages.length === 0 && !isStreaming ? (
                 <div className="welcome">
                   <div className="welcome-icon">🤖</div>
                   <h2>Hi! I'm Alex, your AI support agent</h2>
@@ -344,8 +540,31 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  {messages.map((m, i) => <Message key={i} msg={m} />)}
-                  {loading && <TypingIndicator />}
+                  {messages.map((m, i) => (
+                    <Message
+                      key={i}
+                      msg={m}
+                      onRetry={m.isError ? handleRetry : null}
+                    />
+                  ))}
+
+                  {/* Live streaming assistant bubble */}
+                  {isStreaming && (
+                    <div className="message assistant">
+                      <div className="message-avatar" style={{background:'linear-gradient(135deg,var(--primary),#8b5cf6)'}}>🤖</div>
+                      <div className="message-content">
+                        <div className="message-bubble">
+                          {streamingContent
+                            ? <MarkdownContent content={streamingContent} />
+                            : <TypingIndicator inline />
+                          }
+                          <span className="streaming-cursor" />
+                        </div>
+                        {streamingTools.length > 0 && <StreamingTools tools={streamingTools} />}
+                      </div>
+                    </div>
+                  )}
+
                   <div ref={bottomRef} />
                 </>
               )}
@@ -359,7 +578,7 @@ export default function App() {
                   onSelect={handleSuggestionSelect}
                   onHover={setActiveSuggestion}
                 />
-                <div className="input-wrapper">
+                <div className={`input-wrapper${overLimit ? ' input-over-limit' : ''}`}>
                   <textarea
                     ref={inputRef}
                     className="chat-input"
@@ -370,10 +589,22 @@ export default function App() {
                     rows={1}
                     aria-autocomplete="list"
                     aria-expanded={suggestions.length > 0}
+                    disabled={isStreaming}
                   />
-                  <button className="send-btn" onClick={() => sendMessage()} disabled={!input.trim() || loading}>
-                    <Send size={15} />
-                  </button>
+                  <div className="input-right">
+                    {charCount > 1800 && (
+                      <span className={`char-count${overLimit ? ' over' : ''}`}>
+                        {charCount}/2000
+                      </span>
+                    )}
+                    <button
+                      className="send-btn"
+                      onClick={() => sendMessage()}
+                      disabled={!input.trim() || loading || isStreaming || overLimit}
+                    >
+                      <Send size={15} />
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="input-hint">Press Enter to send · Shift+Enter for new line · ↑↓ to navigate suggestions</div>
