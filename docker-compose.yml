@@ -1,0 +1,77 @@
+# SupportAI — Local Development Stack
+#
+# Services:
+#   dynamodb-local  — Amazon DynamoDB Local on port 8001
+#   backend         — FastAPI + LangGraph agent on port 8000
+#   frontend        — Vite dev server on port 5173
+#
+# Usage:
+#   docker compose up            # start all services
+#   docker compose up backend    # start only backend + its deps
+#   docker compose down -v       # stop and remove volumes
+
+services:
+  # ── DynamoDB Local ───────────────────────────────────────────────────────────
+  dynamodb-local:
+    image: amazon/dynamodb-local:2.5.2
+    container_name: supportai-dynamodb
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-port", "8001"]
+    ports:
+      - "8001:8001"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+    working_dir: /home/dynamodblocal
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Backend ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: supportai-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override the DynamoDB endpoint to point to the local container
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8001
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source so code changes reload without rebuilding
+      - ./backend:/app
+      # Keep the chroma_db persistent across restarts
+      - chroma-data:/app/knowledge_base/chroma_db
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── React Frontend ───────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: supportai-frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules   # keep node_modules inside the container
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  dynamodb-data:
+  chroma-data:
