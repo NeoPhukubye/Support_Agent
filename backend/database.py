@@ -1,7 +1,7 @@
 import boto3
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,7 +10,7 @@ load_dotenv()
 # DynamoDB client — points to DynamoDB Local when DYNAMODB_ENDPOINT is set,
 # otherwise uses the real AWS endpoint (picked up via boto3 credential chain).
 # ---------------------------------------------------------------------------
-_endpoint = os.getenv("DYNAMODB_ENDPOINT")  # e.g. "http://localhost:8000"
+_endpoint = os.getenv("DYNAMODB_ENDPOINT")
 _region   = os.getenv("AWS_REGION", "us-east-1")
 TABLE_NAME = os.getenv("DYNAMODB_TABLE", "support_tickets")
 
@@ -39,16 +39,12 @@ def _ensure_table_exists():
         AttributeDefinitions=[{"AttributeName": "id", "AttributeType": "S"}],
         BillingMode="PAY_PER_REQUEST",
     )
-    # Wait until the table is active before proceeding
     _dynamodb.meta.client.get_waiter("table_exists").wait(TableName=TABLE_NAME)
     print(f"[DB] Created DynamoDB table '{TABLE_NAME}'")
 
 
-_ensure_table_exists()
-
-
 # ---------------------------------------------------------------------------
-# Public API (same signatures as the original SQLite version)
+# Public API
 # ---------------------------------------------------------------------------
 
 def create_ticket(
@@ -59,7 +55,7 @@ def create_ticket(
     priority: str = "medium",
 ) -> dict:
     ticket_id = str(uuid.uuid4())[:8].upper()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     item = {
         "id":          ticket_id,
         "email":       email,
@@ -81,14 +77,18 @@ def get_ticket(ticket_id: str) -> dict | None:
     return response.get("Item")
 
 
-def list_tickets(email: str = None) -> list[dict]:
+def list_tickets(email: str = None, limit: int = 10, next_token: str = None) -> dict:
     table = _get_table()
+    scan_kwargs: dict = {}
     if email:
-        response = table.scan(
-            FilterExpression=boto3.dynamodb.conditions.Attr("email").eq(email)
-        )
-    else:
-        response = table.scan()
+        scan_kwargs["FilterExpression"] = boto3.dynamodb.conditions.Attr("email").eq(email)
+    if next_token:
+        scan_kwargs["ExclusiveStartKey"] = {"id": {"S": next_token}}
+    response = table.scan(**scan_kwargs)
     items = response.get("Items", [])
     items.sort(key=lambda t: t.get("created_at", ""), reverse=True)
-    return items[:10]
+    return {
+        "items": items[:limit],
+        "next_token": response.get("LastEvaluatedKey", {}).get("id"),
+        "count": len(items),
+    }
