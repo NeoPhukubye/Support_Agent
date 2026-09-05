@@ -1,12 +1,13 @@
 import boto3
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from config import settings
+from logging_config import logger
 
 # ---------------------------------------------------------------------------
-# DynamoDB client — points to DynamoDB Local when DYNAMODB_ENDPOINT is set,
-# otherwise uses the real AWS endpoint (picked up via boto3 credential chain).
+# DynamoDB client
 # ---------------------------------------------------------------------------
 _endpoint = settings.dynamodb_endpoint
 _region   = settings.aws_region
@@ -66,13 +67,22 @@ def create_ticket(
         "created_at":  now,
         "updated_at":  now,
     }
-    _get_table().put_item(Item=item)
+    try:
+        _get_table().put_item(Item=item)
+        logger.info("Created ticket %s", ticket_id)
+    except Exception:
+        logger.exception("Failed to create ticket")
+        raise
     return item
 
 
 def get_ticket(ticket_id: str) -> dict | None:
-    response = _get_table().get_item(Key={"id": ticket_id.upper()})
-    return response.get("Item")
+    try:
+        response = _get_table().get_item(Key={"id": ticket_id.upper()})
+        return response.get("Item")
+    except Exception:
+        logger.exception("Failed to get ticket %s", ticket_id)
+        raise
 
 
 def list_tickets(email: str = None, limit: int = 10, next_token: str = None) -> dict:
@@ -82,7 +92,11 @@ def list_tickets(email: str = None, limit: int = 10, next_token: str = None) -> 
         scan_kwargs["FilterExpression"] = boto3.dynamodb.conditions.Attr("email").eq(email)
     if next_token:
         scan_kwargs["ExclusiveStartKey"] = {"id": {"S": next_token}}
-    response = table.scan(**scan_kwargs)
+    try:
+        response = table.scan(**scan_kwargs)
+    except Exception:
+        logger.exception("Failed to list tickets")
+        raise
     items = response.get("Items", [])
     items.sort(key=lambda t: t.get("created_at", ""), reverse=True)
     return {
