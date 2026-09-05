@@ -5,6 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.prebuilt import create_react_agent
 
 from config import settings
+from logging_config import logger
 from tools import (
     search_kb,
     create_support_ticket,
@@ -68,11 +69,11 @@ def _build_messages(message: str, history: list[dict]) -> list:
 
 def run_agent(message: str, history: list[dict]) -> dict:
     """Run the agent and return the full response + tools used."""
+    logger.info("run_agent message=%s history_len=%d", message[:50], len(history))
     messages = _build_messages(message, history)
     result = agent.invoke({"messages": messages})
     all_messages = result["messages"]
 
-    # Deduplicated list of tool names used
     tool_calls_used = []
     for msg in all_messages:
         if hasattr(msg, "tool_calls") and msg.tool_calls:
@@ -81,6 +82,7 @@ def run_agent(message: str, history: list[dict]) -> dict:
         elif hasattr(msg, "name") and msg.name:
             tool_calls_used.append(msg.name)
 
+    logger.info("run_agent tools_used=%s", tool_calls_used)
     return {
         "response": all_messages[-1].content,
         "tools_used": list(dict.fromkeys(tool_calls_used)),
@@ -102,29 +104,26 @@ def stream_agent(message: str, history: list[dict]):
 
     try:
         for event in agent.stream({"messages": messages}, stream_mode="messages"):
-            # event is a tuple: (message_chunk, metadata)
             msg_chunk, _meta = event
 
-            # Tool invocation notifications
             if hasattr(msg_chunk, "tool_calls") and msg_chunk.tool_calls:
                 for tc in msg_chunk.tool_calls:
                     name = tc.get("name", "")
                     if name:
                         tool_calls_used.append(name)
+                        logger.info("stream_agent tool=%s", name)
                         yield f"data: {json.dumps({'type': 'tool', 'name': name})}\n\n"
 
-            # ToolMessage (result of a tool call)
             if hasattr(msg_chunk, "name") and msg_chunk.name and not getattr(msg_chunk, "tool_calls", None):
                 if msg_chunk.name not in tool_calls_used:
                     tool_calls_used.append(msg_chunk.name)
 
-            # Streamed text tokens from the final AI response
             if hasattr(msg_chunk, "content") and isinstance(msg_chunk.content, str) and msg_chunk.content:
-                # Only stream tokens from the final AI message (not tool result messages)
                 if not getattr(msg_chunk, "name", None) and not getattr(msg_chunk, "tool_calls", None):
                     yield f"data: {json.dumps({'type': 'token', 'content': msg_chunk.content})}\n\n"
 
         yield f"data: {json.dumps({'type': 'done', 'tools_used': list(dict.fromkeys(tool_calls_used))})}\n\n"
 
     except Exception as exc:
+        logger.exception("stream_agent failed")
         yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)})}\n\n"
