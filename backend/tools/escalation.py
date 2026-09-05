@@ -1,5 +1,21 @@
 from langchain_core.tools import tool
 from database import create_ticket
+import re
+
+_VALID_URGENCY = {"normal", "urgent"}
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _validate_email(email: str) -> str:
+    if not _EMAIL_RE.match(email):
+        raise ValueError(f"Invalid email address: {email}")
+    return email
+
+
+def _validate_urgency(urgency: str) -> str:
+    if urgency not in _VALID_URGENCY:
+        raise ValueError(f"Invalid urgency '{urgency}'. Must be one of: normal, urgent")
+    return urgency
 
 
 @tool
@@ -10,6 +26,9 @@ def escalate_to_human(email: str, issue_summary: str, urgency: str = "normal") -
 
     urgency: 'normal' or 'urgent'
     """
+    _validate_email(email)
+    _validate_urgency(urgency)
+
     ticket = create_ticket(
         email=email,
         category="escalation",
