@@ -6,21 +6,24 @@ from typing import Optional
 import uvicorn
 import sys
 import os
-
-import os
+import signal
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
-
+from config import settings
 from agent import run_agent, stream_agent
-from database import get_ticket, list_tickets
+from database import get_ticket, list_tickets, _ensure_table_exists
 
 app = FastAPI(title="SupportAI Agent API", version="1.0.0")
 
+
+@app.on_event("startup")
+def on_startup():
+    _ensure_table_exists()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN],
+    allow_origins=[settings.frontend_origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,8 +31,8 @@ app.add_middleware(
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
-MAX_MESSAGE_LENGTH = 2000   # characters
-MAX_HISTORY_TURNS  = 20     # message pairs kept
+MAX_MESSAGE_LENGTH = settings.max_message_length   # characters
+MAX_HISTORY_TURNS  = settings.max_history_turns    # message pairs kept
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────────
@@ -124,4 +127,9 @@ def get_ticket_by_id(ticket_id: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    def handle_sigterm(*_):
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
+    signal.signal(signal.SIGINT, handle_sigterm)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
