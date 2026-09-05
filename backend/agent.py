@@ -1,10 +1,10 @@
 import json
 import os
-from dotenv import load_dotenv
 from langchain_aws import ChatBedrockConverse
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.prebuilt import create_react_agent
 
+from config import settings
 from tools import (
     search_kb,
     create_support_ticket,
@@ -13,13 +13,11 @@ from tools import (
     escalate_to_human,
 )
 
-load_dotenv()
-
 # ── LLM ───────────────────────────────────────────────────────────────────────
 
 llm = ChatBedrockConverse(
-    model=os.getenv("MODEL_NAME", "anthropic.claude-3-5-sonnet-20241022-v2:0"),
-    region_name=os.getenv("AWS_REGION", "us-east-1"),
+    model=settings.model_name,
+    region_name=settings.aws_region,
     temperature=0.2,
     max_tokens=1024,
 )
