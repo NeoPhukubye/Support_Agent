@@ -1,5 +1,28 @@
 from langchain_core.tools import tool
 from database import create_ticket, get_ticket, list_tickets
+import re
+
+_VALID_CATEGORIES = {"billing", "technical", "account", "feature_request", "other"}
+_VALID_PRIORITIES = {"low", "medium", "high", "critical"}
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _validate_email(email: str) -> str:
+    if not _EMAIL_RE.match(email):
+        raise ValueError(f"Invalid email address: {email}")
+    return email
+
+
+def _validate_category(category: str) -> str:
+    if category not in _VALID_CATEGORIES:
+        raise ValueError(f"Invalid category '{category}'. Must be one of: {', '.join(sorted(_VALID_CATEGORIES))}")
+    return category
+
+
+def _validate_priority(priority: str) -> str:
+    if priority not in _VALID_PRIORITIES:
+        raise ValueError(f"Invalid priority '{priority}'. Must be one of: {', '.join(sorted(_VALID_PRIORITIES))}")
+    return priority
 
 
 @tool
@@ -16,6 +39,10 @@ def create_support_ticket(
     category: one of 'billing', 'technical', 'account', 'feature_request', 'other'
     priority: one of 'low', 'medium', 'high', 'critical'
     """
+    _validate_email(email)
+    _validate_category(category)
+    _validate_priority(priority)
+
     ticket = create_ticket(
         email=email,
         category=category,
