@@ -1,25 +1,23 @@
 import boto3
-import os
 import uuid
 from datetime import datetime, timezone
-from dotenv import load_dotenv
 
-load_dotenv()
+from config import settings
 
 # ---------------------------------------------------------------------------
 # DynamoDB client — points to DynamoDB Local when DYNAMODB_ENDPOINT is set,
 # otherwise uses the real AWS endpoint (picked up via boto3 credential chain).
 # ---------------------------------------------------------------------------
-_endpoint = os.getenv("DYNAMODB_ENDPOINT")
-_region   = os.getenv("AWS_REGION", "us-east-1")
-TABLE_NAME = os.getenv("DYNAMODB_TABLE", "support_tickets")
+_endpoint = settings.dynamodb_endpoint
+_region   = settings.aws_region
+TABLE_NAME = settings.dynamodb_table
 
 _dynamodb = boto3.resource(
     "dynamodb",
     region_name=_region,
     endpoint_url=_endpoint,
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "local"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "local"),
+    aws_access_key_id=settings.aws_access_key_id,
+    aws_secret_access_key=settings.aws_secret_access_key,
 )
 
 
