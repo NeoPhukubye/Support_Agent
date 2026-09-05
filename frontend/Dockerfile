@@ -1,15 +1,18 @@
-FROM node:20-slim
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install deps first (cached layer)
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy source
 COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 5173
 
-# Vite must bind to 0.0.0.0 to be reachable from outside the container
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["nginx", "-g", "daemon off;"]
