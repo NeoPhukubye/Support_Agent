@@ -7,7 +7,11 @@ import uvicorn
 import sys
 import os
 
+import os
+
 sys.path.insert(0, os.path.dirname(__file__))
+
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
 
 from agent import run_agent, stream_agent
 from database import get_ticket, list_tickets
@@ -16,7 +20,7 @@ app = FastAPI(title="SupportAI Agent API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[FRONTEND_ORIGIN],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
