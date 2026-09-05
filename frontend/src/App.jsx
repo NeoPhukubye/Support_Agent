@@ -7,7 +7,7 @@ import {
   Menu, X, AlertCircle, RotateCcw,
 } from 'lucide-react'
 
-const API = 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const TOOL_ICONS = {
   search_kb: '🔍',
@@ -200,14 +200,22 @@ function Message({ msg, onRetry }) {
 function TicketsPanel() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const load = async () => {
     setLoading(true)
+    setError(null)
     try {
       const r = await fetch(`${API}/tickets`)
+      if (!r.ok) {
+        throw new Error(`Failed to load tickets (${r.status})`)
+      }
       setTickets(await r.json())
-    } catch { }
-    setLoading(false)
+    } catch (err) {
+      setError(err.message || 'Failed to load tickets')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])
@@ -219,7 +227,16 @@ function TicketsPanel() {
         <RefreshCw size={13} className={loading ? 'spin' : ''} />
         Refresh
       </button>
-      {tickets.length === 0 ? (
+      {error ? (
+        <div className="empty-state">
+          <AlertCircle size={40} strokeWidth={1} />
+          <p>{error}</p>
+          <button className="refresh-btn" onClick={load}>
+            <RefreshCw size={13} className={loading ? 'spin' : ''} />
+            Retry
+          </button>
+        </div>
+      ) : tickets.length === 0 ? (
         <div className="empty-state">
           <Ticket size={40} strokeWidth={1} />
           <p>No tickets yet. Start a chat to create one!</p>
