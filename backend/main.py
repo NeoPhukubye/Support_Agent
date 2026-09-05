@@ -11,6 +11,7 @@ import signal
 sys.path.insert(0, os.path.dirname(__file__))
 
 from config import settings
+from logging_config import logger
 from agent import run_agent, stream_agent
 from database import get_ticket, list_tickets, _ensure_table_exists
 
@@ -19,6 +20,7 @@ app = FastAPI(title="SupportAI Agent API", version="1.0.0")
 
 @app.on_event("startup")
 def on_startup():
+    logger.info("Starting SupportAI Agent API v%s", "1.0.0")
     _ensure_table_exists()
 
 app.add_middleware(
@@ -74,13 +76,42 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    checks = {
+        "status": "healthy",
+        "version": "1.0.0",
+        "dependencies": {},
+    }
+    try:
+        from database import _get_table
+        _get_table().table_status
+        checks["dependencies"]["dynamodb"] = "ok"
+    except Exception as exc:
+        logger.exception("Health check DynamoDB failed")
+        checks["dependencies"]["dynamodb"] = f"error: {exc}"
+        checks["status"] = "degraded"
+
+    try:
+        import chromadb
+        checks["dependencies"]["chromadb"] = "ok"
+    except Exception as exc:
+        checks["dependencies"]["chromadb"] = f"error: {exc}"
+        checks["status"] = "degraded"
+
+    try:
+        from langchain_aws import ChatBedrockConverse
+        checks["dependencies"]["bedrock"] = "ok"
+    except Exception as exc:
+        checks["dependencies"]["bedrock"] = f"error: {exc}"
+        checks["status"] = "degraded"
+
+    return checks
 
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
     """Standard (non-streaming) chat endpoint."""
     try:
+        logger.info("POST /chat message=%s", req.message[:50])
         history = [{"role": m.role, "content": m.content} for m in req.history]
         result = run_agent(req.message, history)
         return ChatResponse(
@@ -88,6 +119,7 @@ def chat(req: ChatRequest):
             tools_used=result["tools_used"],
         )
     except Exception as e:
+        logger.exception("POST /chat failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -102,6 +134,7 @@ def chat_stream(req: ChatRequest):
       {"type": "done",  "tools_used": ["..."]}
       {"type": "error", "detail": "<message>"}
     """
+    logger.info("POST /chat/stream message=%s", req.message[:50])
     history = [{"role": m.role, "content": m.content} for m in req.history]
     return StreamingResponse(
         stream_agent(req.message, history),
@@ -115,11 +148,13 @@ def chat_stream(req: ChatRequest):
 
 @app.get("/tickets")
 def get_all_tickets():
+    logger.info("GET /tickets")
     return list_tickets()
 
 
 @app.get("/tickets/{ticket_id}")
 def get_ticket_by_id(ticket_id: str):
+    logger.info("GET /tickets/%s", ticket_id)
     ticket = get_ticket(ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
