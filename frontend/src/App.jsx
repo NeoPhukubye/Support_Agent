@@ -319,11 +319,17 @@ export default function App() {
     const history = messages.map(m => ({ role: m.role, content: m.content }))
 
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 120_000)
+
       const response = await fetch(`${API}/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: content, history }),
+        signal: controller.signal,
       })
+
+      clearTimeout(timeout)
 
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`)
@@ -341,7 +347,7 @@ export default function App() {
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        buffer = lines.pop() // keep incomplete line in buffer
+        buffer = lines.pop()
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
