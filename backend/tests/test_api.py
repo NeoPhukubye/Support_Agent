@@ -1,8 +1,9 @@
-from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-
-import sys
 import os
+import sys
+from unittest.mock import MagicMock, patch
+
+from fastapi.testclient import TestClient
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from main import app
@@ -17,8 +18,9 @@ def test_root():
 
 
 def test_health():
-    with patch("database._get_table") as mock_table, \
-         patch.dict("sys.modules", {"chromadb": MagicMock(), "langchain_aws": MagicMock()}):
+    with patch("database._get_table") as mock_table, patch.dict(
+        "sys.modules", {"chromadb": MagicMock(), "langchain_aws": MagicMock()}
+    ):
         mock_table.return_value.table_status = "ACTIVE"
         r = client.get("/health")
         assert r.status_code == 200

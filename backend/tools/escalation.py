@@ -1,6 +1,7 @@
-from langchain_core.tools import tool
-from database import create_ticket
 import re
+
+from database import create_ticket
+from langchain_core.tools import tool
 
 _VALID_URGENCY = {"normal", "urgent"}
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -21,8 +22,8 @@ def _validate_urgency(urgency: str) -> str:
 @tool
 def escalate_to_human(email: str, issue_summary: str, urgency: str = "normal") -> str:
     """Escalate a complex or sensitive issue to a human support agent.
-    Use for: legal complaints, security incidents, account compromise, highly frustrated customers,
-    or issues that require human judgment.
+    Use for: legal complaints, security incidents, account compromise,
+    highly frustrated customers, or issues that require human judgment.
 
     urgency: 'normal' or 'urgent'
     """

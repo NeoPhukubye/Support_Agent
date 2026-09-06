@@ -1,11 +1,12 @@
-from langchain_core.tools import tool
 from knowledge_base.vector_store import search_knowledge_base
+from langchain_core.tools import tool
 
 
 @tool
 def search_kb(query: str) -> str:
     """Search the support knowledge base for answers to customer questions about
-    billing, technical issues, account management, features, policies, and troubleshooting."""
+    billing, technical issues, account management, features, policies,
+    and troubleshooting."""
     results = search_knowledge_base(query)
     if not results:
         return "No relevant information found in the knowledge base."

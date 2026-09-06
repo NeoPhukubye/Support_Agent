@@ -1,7 +1,7 @@
-import boto3
 import uuid
 from datetime import datetime, timezone
 
+import boto3
 from config import settings
 from logging_config import logger
 
@@ -88,7 +88,9 @@ def list_tickets(email: str = None, limit: int = 10, next_token: str = None) -> 
     table = _get_table()
     scan_kwargs: dict = {}
     if email:
-        scan_kwargs["FilterExpression"] = boto3.dynamodb.conditions.Attr("email").eq(email)
+        scan_kwargs["FilterExpression"] = (
+            boto3.dynamodb.conditions.Attr("email").eq(email)
+        )
     if next_token:
         scan_kwargs["ExclusiveStartKey"] = {"id": {"S": next_token}}
     try:
