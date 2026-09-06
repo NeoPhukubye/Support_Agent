@@ -1,16 +1,16 @@
 import json
-from langchain_aws import ChatBedrockConverse
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-from langgraph.prebuilt import create_react_agent
 
 from config import settings
+from langchain_aws import ChatBedrockConverse
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langgraph.prebuilt import create_react_agent
 from logging_config import logger
 from tools import (
-    search_kb,
     create_support_ticket,
+    escalate_to_human,
     get_ticket_status,
     list_my_tickets,
-    escalate_to_human,
+    search_kb,
 )
 
 # ── LLM ───────────────────────────────────────────────────────────────────────
@@ -24,33 +24,45 @@ llm = ChatBedrockConverse(
 
 # ── System prompt ──────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are Alex, an intelligent AI customer support agent for SupportAI — a SaaS platform.
-
-Your goal is to resolve customer issues quickly, accurately, and empathetically.
-
-## Your Capabilities:
-1. **search_kb** — Search the knowledge base for answers to common questions
-2. **create_support_ticket** — Create a ticket when an issue needs follow-up
-3. **get_ticket_status** — Check the status of an existing ticket
-4. **list_my_tickets** — Show all tickets for a customer
-5. **escalate_to_human** — Escalate complex/urgent issues to a human agent
-
-## Behavior Guidelines:
-- Always greet the customer warmly and professionally
-- Search the knowledge base FIRST before asking for more info
-- If KB has a clear answer, provide it directly — do NOT create a ticket
-- Create a ticket only when: the issue needs investigation, the KB has no answer, or the customer explicitly requests it
-- Escalate when: the customer is very frustrated, the issue is security/legal, or you cannot resolve it
-- Ask for the customer's email before creating tickets or escalating
-- Be concise but thorough — bullet points work well for step-by-step instructions
-- Format your responses using Markdown: use **bold** for emphasis, bullet lists for steps, and `code` for error codes
-- Always end with "Is there anything else I can help you with?"
-
-## Tone: Professional, warm, solution-focused. Never robotic."""
+SYSTEM_PROMPT = (
+    "You are Alex, an AI customer support agent for SupportAI.\n"
+    "\n"
+    "Your goal is to resolve customer issues quickly, accurately, and empathetically.\n"
+    "\n"
+    "## Your Capabilities:\n"
+    "1. **search_kb** — Search the knowledge base for answers to common questions\n"
+    "2. **create_support_ticket** — Create a ticket when an issue needs follow-up\n"
+    "3. **get_ticket_status** — Check the status of an existing ticket\n"
+    "4. **list_my_tickets** — Show all tickets for a customer\n"
+    "5. **escalate_to_human** — Escalate complex/urgent issues to a human agent\n"
+    "\n"
+    "## Behavior Guidelines:\n"
+    " - Always greet the customer warmly and professionally\n"
+    " - Search the knowledge base FIRST before asking for more info\n"
+    " - If KB has a clear answer, provide it directly — do NOT create a ticket\n"
+    " - Create a ticket when: the issue needs investigation,\n"
+    "   the KB has no answer, or the customer explicitly requests it\n"
+    " - Escalate when: the customer is very frustrated, the issue is security/legal,\n"
+    "   or you cannot resolve it\n"
+    " - Ask for the customer's email before creating tickets or escalating\n"
+    " - Be concise but thorough — bullet points work well for\n"
+    "   step-by-step instructions\n"
+    " - Format your responses using Markdown: use **bold** for emphasis,\n"
+    "   bullet lists for steps, and `code` for error codes\n"
+    " - Always end with \"Is there anything else I can help you with?\"\n"
+    "\n"
+    "## Tone: Professional, warm, solution-focused. Never robotic."
+)
 
 # ── Agent ──────────────────────────────────────────────────────────────────────
 
-tools = [search_kb, create_support_ticket, get_ticket_status, list_my_tickets, escalate_to_human]
+tools = [
+    search_kb,
+    create_support_ticket,
+    get_ticket_status,
+    list_my_tickets,
+    escalate_to_human,
+]
 agent = create_react_agent(llm, tools)
 
 
@@ -95,7 +107,7 @@ def stream_agent(message: str, history: list[dict]):
     Event types:
       - data: {"type": "tool", "name": "<tool_name>"}   — tool call notification
       - data: {"type": "token", "content": "<chunk>"}   — streamed text token
-      - data: {"type": "done", "tools_used": [...]}      — final event with full tool list
+      - data: {"type": "done", "tools_used": [...]}  — final event with full tool list
       - data: {"type": "error", "detail": "<msg>"}       — error event
     """
     messages = _build_messages(message, history)
@@ -113,15 +125,32 @@ def stream_agent(message: str, history: list[dict]):
                         logger.info("stream_agent tool=%s", name)
                         yield f"data: {json.dumps({'type': 'tool', 'name': name})}\n\n"
 
-            if hasattr(msg_chunk, "name") and msg_chunk.name and not getattr(msg_chunk, "tool_calls", None):
+            if (
+                hasattr(msg_chunk, "name")
+                and msg_chunk.name
+                and not getattr(msg_chunk, "tool_calls", None)
+            ):
                 if msg_chunk.name not in tool_calls_used:
                     tool_calls_used.append(msg_chunk.name)
 
-            if hasattr(msg_chunk, "content") and isinstance(msg_chunk.content, str) and msg_chunk.content:
-                if not getattr(msg_chunk, "name", None) and not getattr(msg_chunk, "tool_calls", None):
-                    yield f"data: {json.dumps({'type': 'token', 'content': msg_chunk.content})}\n\n"
+            if (
+                hasattr(msg_chunk, "content")
+                and isinstance(msg_chunk.content, str)
+                and msg_chunk.content
+            ):
+                if (
+                    not getattr(msg_chunk, "name", None)
+                    and not getattr(msg_chunk, "tool_calls", None)
+                ):
+                    payload = json.dumps(
+                        {"type": "token", "content": msg_chunk.content}
+                    )
+                    yield f"data: {payload}\n\n"
 
-        yield f"data: {json.dumps({'type': 'done', 'tools_used': list(dict.fromkeys(tool_calls_used))})}\n\n"
+        payload = json.dumps(
+            {"type": "done", "tools_used": list(dict.fromkeys(tool_calls_used))}
+        )
+        yield f"data: {payload}\n\n"
 
     except Exception as exc:  # noqa: BLE001
         logger.exception("stream_agent failed")
