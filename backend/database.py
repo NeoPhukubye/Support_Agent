@@ -1,7 +1,6 @@
 import boto3
 import uuid
 from datetime import datetime, timezone
-from typing import Any
 
 from config import settings
 from logging_config import logger
