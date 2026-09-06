@@ -85,7 +85,7 @@ def health():
         from database import _get_table
         _get_table().table_status
         checks["dependencies"]["dynamodb"] = "ok"
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.exception("Health check DynamoDB failed")
         checks["dependencies"]["dynamodb"] = f"error: {exc}"
         checks["status"] = "degraded"
@@ -94,7 +94,7 @@ def health():
         import importlib
         importlib.import_module("chromadb")
         checks["dependencies"]["chromadb"] = "ok"
-    except Exception as exc:
+    except ImportError as exc:
         checks["dependencies"]["chromadb"] = f"error: {exc}"
         checks["status"] = "degraded"
 
@@ -102,7 +102,7 @@ def health():
         import importlib
         importlib.import_module("langchain_aws")
         checks["dependencies"]["bedrock"] = "ok"
-    except Exception as exc:
+    except ImportError as exc:
         checks["dependencies"]["bedrock"] = f"error: {exc}"
         checks["status"] = "degraded"
 
@@ -120,7 +120,7 @@ def chat(req: ChatRequest):
             response=result["response"],
             tools_used=result["tools_used"],
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.exception("POST /chat failed")
         raise HTTPException(status_code=500, detail=str(e))
 
