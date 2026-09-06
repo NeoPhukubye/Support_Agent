@@ -67,7 +67,7 @@ function MarkdownContent({ content }) {
       remarkPlugins={[remarkGfm]}
       components={{
         // Inline code
-        code({ node, inline, className, children, ...props }) {
+        code({ _node, inline, _className, children, ...props }) {
           return inline ? (
             <code className="md-code-inline" {...props}>{children}</code>
           ) : (
@@ -378,7 +378,7 @@ export default function App() {
         tools_used: toolsUsed,
         timestamp: Date.now(),
       }])
-    } catch (e) {
+    } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: 'Connection error — make sure the backend is running on port 8000.',
