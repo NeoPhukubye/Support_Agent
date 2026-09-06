@@ -13,7 +13,7 @@ from tools import (
     search_kb,
 )
 
-# ── LLM ───────────────────────────────────────────────────────────────────────
+# ── LLM ─────────────────────────────────────────────────────────────[...]
 
 llm = ChatBedrockConverse(
     model=settings.model_name,
@@ -22,7 +22,7 @@ llm = ChatBedrockConverse(
     max_tokens=1024,
 )
 
-# ── System prompt ──────────────────────────────────────────────────────────────
+# ── System prompt ───────────────────────────────────────────────────────────[...]
 
 SYSTEM_PROMPT = (
     "You are Alex, an AI customer support agent for SupportAI.\n"
@@ -54,7 +54,7 @@ SYSTEM_PROMPT = (
     "## Tone: Professional, warm, solution-focused. Never robotic."
 )
 
-# ── Agent ──────────────────────────────────────────────────────────────────────
+# ── Agent ─────────────────────────────────────────────────────────────[...]
 
 tools = [
     search_kb,
@@ -115,7 +115,7 @@ def stream_agent(message: str, history: list[dict]):
 
     try:
         for event in agent.stream({"messages": messages}, stream_mode="messages"):
-            msg_chunk, _meta = event
+            msg_chunk, _ = event
 
             if hasattr(msg_chunk, "tool_calls") and msg_chunk.tool_calls:
                 for tc in msg_chunk.tool_calls:
