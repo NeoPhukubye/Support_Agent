@@ -1,3 +1,4 @@
+import importlib
 import os
 import signal
 import sys
@@ -92,7 +93,6 @@ def health():
         checks["status"] = "degraded"
 
     try:
-        import importlib
         importlib.import_module("chromadb")
         checks["dependencies"]["chromadb"] = "ok"
     except ImportError as exc:
@@ -100,7 +100,6 @@ def health():
         checks["status"] = "degraded"
 
     try:
-        import importlib
         importlib.import_module("langchain_aws")
         checks["dependencies"]["bedrock"] = "ok"
     except ImportError as exc:
@@ -144,7 +143,8 @@ def chat_stream(req: ChatRequest):
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",   # disable nginx buffering if behind a proxy
+            # disable nginx buffering if behind a proxy
+            "X-Accel-Buffering": "no",
         },
     )
 
