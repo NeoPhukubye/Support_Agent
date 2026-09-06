@@ -91,14 +91,16 @@ def health():
         checks["status"] = "degraded"
 
     try:
-        import chromadb
+        import importlib
+        importlib.import_module("chromadb")
         checks["dependencies"]["chromadb"] = "ok"
     except Exception as exc:
         checks["dependencies"]["chromadb"] = f"error: {exc}"
         checks["status"] = "degraded"
 
     try:
-        from langchain_aws import ChatBedrockConverse
+        import importlib
+        importlib.import_module("langchain_aws")
         checks["dependencies"]["bedrock"] = "ok"
     except Exception as exc:
         checks["dependencies"]["bedrock"] = f"error: {exc}"
