@@ -123,6 +123,6 @@ def stream_agent(message: str, history: list[dict]):
 
         yield f"data: {json.dumps({'type': 'done', 'tools_used': list(dict.fromkeys(tool_calls_used))})}\n\n"
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.exception("stream_agent failed")
         yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)})}\n\n"
