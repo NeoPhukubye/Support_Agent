@@ -1,6 +1,7 @@
-from langchain_core.tools import tool
-from database import create_ticket, get_ticket, list_tickets
 import re
+
+from database import create_ticket, get_ticket, list_tickets
+from langchain_core.tools import tool
 
 _VALID_CATEGORIES = {"billing", "technical", "account", "feature_request", "other"}
 _VALID_PRIORITIES = {"low", "medium", "high", "critical"}
@@ -15,13 +16,19 @@ def _validate_email(email: str) -> str:
 
 def _validate_category(category: str) -> str:
     if category not in _VALID_CATEGORIES:
-        raise ValueError(f"Invalid category '{category}'. Must be one of: {', '.join(sorted(_VALID_CATEGORIES))}")
+        raise ValueError(
+            f"Invalid category '{category}'. Must be one of: "
+            f"{', '.join(sorted(_VALID_CATEGORIES))}"
+        )
     return category
 
 
 def _validate_priority(priority: str) -> str:
     if priority not in _VALID_PRIORITIES:
-        raise ValueError(f"Invalid priority '{priority}'. Must be one of: {', '.join(sorted(_VALID_PRIORITIES))}")
+        raise ValueError(
+            f"Invalid priority '{priority}'. Must be one of: "
+            f"{', '.join(sorted(_VALID_PRIORITIES))}"
+        )
     return priority
 
 
@@ -33,8 +40,9 @@ def create_support_ticket(
     description: str,
     priority: str = "medium",
 ) -> str:
-    """Create a support ticket for a customer issue that cannot be resolved immediately.
-    Use when the knowledge base doesn't have an answer or the issue needs human attention.
+    """Create a support ticket for a customer issue that cannot be resolved
+    immediately. Use when the knowledge base doesn't have an answer or the
+    issue needs human attention.
 
     category: one of 'billing', 'technical', 'account', 'feature_request', 'other'
     priority: one of 'low', 'medium', 'high', 'critical'
@@ -56,7 +64,8 @@ def create_support_ticket(
         f"Category: {ticket['category']}\n"
         f"Priority: {ticket['priority']}\n"
         f"Status: {ticket['status']}\n"
-        f"Our team will respond within 24 hours. Reference your ticket ID: {ticket['id']}"
+        f"Our team will respond within 24 hours. "
+        f"Reference your ticket ID: {ticket['id']}"
     )
 
 
@@ -65,7 +74,10 @@ def get_ticket_status(ticket_id: str) -> str:
     """Look up the status of an existing support ticket by its ticket ID."""
     ticket = get_ticket(ticket_id)
     if not ticket:
-        return f"No ticket found with ID '{ticket_id}'. Please check the ID and try again."
+        return (
+            f"No ticket found with ID '{ticket_id}'. "
+            f"Please check the ID and try again."
+        )
     return (
         f"Ticket #{ticket['id']}\n"
         f"Subject: {ticket['subject']}\n"
