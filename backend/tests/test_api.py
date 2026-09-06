@@ -18,7 +18,7 @@ def test_root():
 
 
 def test_health():
-    with patch("main._get_table") as mock_table, \
+    with patch("database._get_table") as mock_table, \
          patch.dict("sys.modules", {"chromadb": MagicMock(), "langchain_aws": MagicMock()}):
         mock_table.return_value.table_status = "ACTIVE"
         r = client.get("/health")
