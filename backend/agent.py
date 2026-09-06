@@ -129,23 +129,21 @@ def stream_agent(message: str, history: list[dict]):
                 hasattr(msg_chunk, "name")
                 and msg_chunk.name
                 and not getattr(msg_chunk, "tool_calls", None)
+                and msg_chunk.name not in tool_calls_used
             ):
-                if msg_chunk.name not in tool_calls_used:
-                    tool_calls_used.append(msg_chunk.name)
+                tool_calls_used.append(msg_chunk.name)
 
             if (
                 hasattr(msg_chunk, "content")
                 and isinstance(msg_chunk.content, str)
                 and msg_chunk.content
+                and not getattr(msg_chunk, "name", None)
+                and not getattr(msg_chunk, "tool_calls", None)
             ):
-                if (
-                    not getattr(msg_chunk, "name", None)
-                    and not getattr(msg_chunk, "tool_calls", None)
-                ):
-                    payload = json.dumps(
-                        {"type": "token", "content": msg_chunk.content}
-                    )
-                    yield f"data: {payload}\n\n"
+                payload = json.dumps(
+                    {"type": "token", "content": msg_chunk.content}
+                )
+                yield f"data: {payload}\n\n"
 
         payload = json.dumps(
             {"type": "done", "tools_used": list(dict.fromkeys(tool_calls_used))}

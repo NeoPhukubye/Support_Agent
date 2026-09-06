@@ -84,7 +84,7 @@ def get_ticket(ticket_id: str) -> dict | None:
         raise
 
 
-def list_tickets(email: str = None, limit: int = 10, next_token: str = None) -> dict:
+def list_tickets(email: str | None = None, limit: int = 10, next_token: str | None = None) -> dict:
     table = _get_table()
     scan_kwargs: dict = {}
     if email:

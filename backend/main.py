@@ -2,7 +2,6 @@ import importlib
 import os
 import signal
 import sys
-from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -48,7 +47,7 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=MAX_MESSAGE_LENGTH)
-    history: Optional[list[ChatMessage]] = []
+    history: list[ChatMessage] | None = []
 
     @field_validator("message")
     @classmethod
@@ -85,7 +84,7 @@ def health():
     }
     try:
         from database import _get_table
-        _get_table().table_status
+        _ = _get_table().table_status
         checks["dependencies"]["dynamodb"] = "ok"
     except Exception as exc:  # noqa: BLE001
         logger.exception("Health check DynamoDB failed")
