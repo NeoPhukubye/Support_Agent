@@ -1,19 +1,20 @@
+import os
+import signal
+import sys
+from typing import Optional
+
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
-import uvicorn
-import sys
-import os
-import signal
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from config import settings
-from logging_config import logger
 from agent import run_agent, stream_agent
-from database import get_ticket, list_tickets, _ensure_table_exists
+from config import settings
+from database import _ensure_table_exists, get_ticket, list_tickets
+from logging_config import logger
 
 app = FastAPI(title="SupportAI Agent API", version="1.0.0")
 
