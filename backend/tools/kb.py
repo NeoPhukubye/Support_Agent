@@ -1,5 +1,6 @@
-from knowledge_base.vector_store import search_knowledge_base
 from langchain_core.tools import tool
+
+from knowledge_base.vector_store import search_knowledge_base
 
 
 @tool
