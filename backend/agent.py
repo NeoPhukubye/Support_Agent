@@ -1,9 +1,10 @@
 import json
 
-from config import settings
 from langchain_aws import ChatBedrockConverse
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
+
+from config import settings
 from logging_config import logger
 from tools import (
     create_support_ticket,
