@@ -1,7 +1,8 @@
 import re
 
-from database import create_ticket, get_ticket, list_tickets
 from langchain_core.tools import tool
+
+from database import create_ticket, get_ticket, list_tickets
 
 _VALID_CATEGORIES = {"billing", "technical", "account", "feature_request", "other"}
 _VALID_PRIORITIES = {"low", "medium", "high", "critical"}
