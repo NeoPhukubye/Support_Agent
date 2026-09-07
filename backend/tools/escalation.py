@@ -1,7 +1,8 @@
 import re
 
-from database import create_ticket
 from langchain_core.tools import tool
+
+from database import create_ticket
 
 _VALID_URGENCY = {"normal", "urgent"}
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
