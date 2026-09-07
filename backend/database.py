@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 import boto3
+
 from config import settings
 from logging_config import logger
 
