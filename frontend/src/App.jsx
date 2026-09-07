@@ -202,7 +202,7 @@ function TicketsPanel() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -216,9 +216,14 @@ function TicketsPanel() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    const fetchData = async () => {
+      await load()
+    }
+    fetchData()
+  }, [load])
 
   return (
     <div className="tickets-panel">
