@@ -29,7 +29,7 @@ def _get_table():
 def _ensure_table_exists():
     """Create the table if it doesn't already exist (idempotent)."""
     client = _dynamodb.meta.client
-    existing = [t["TableName"] for t in client.list_tables()["TableNames"]]
+    existing = client.list_tables().get("TableNames", [])
     if TABLE_NAME in existing:
         return
     client.create_table(
