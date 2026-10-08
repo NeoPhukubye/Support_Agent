@@ -584,7 +584,7 @@ export default function App() {
                         <div className="message-bubble">
                           {streamingContent
                             ? <MarkdownContent content={streamingContent} />
-                            : <TypingIndicator inline />
+                            : <TypingIndicator />
                           }
                           <span className="streaming-cursor" />
                         </div>
