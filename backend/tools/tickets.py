@@ -94,10 +94,11 @@ def get_ticket_status(ticket_id: str) -> str:
 def list_my_tickets(email: str) -> str:
     """List all support tickets for a given customer email address."""
     tickets = list_tickets(email=email)
-    if not tickets:
+    items = tickets.get("items", [])
+    if not items:
         return f"No tickets found for {email}."
-    lines = [f"Found {len(tickets)} ticket(s) for {email}:\n"]
-    for t in tickets:
+    lines = [f"Found {len(items)} ticket(s) for {email}:\n"]
+    for t in items:
         lines.append(
             f"  • #{t['id']} [{t['status'].upper()}] {t['subject']} ({t['category']})"
         )
