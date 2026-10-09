@@ -19,8 +19,8 @@ from tools import (
 llm = ChatBedrockConverse(
     model=settings.model_name,
     region_name=settings.aws_region,
-    temperature=0.2,
-    max_tokens=1024,
+    temperature=settings.bedrock_temperature,
+    max_tokens=settings.bedrock_max_tokens,
 )
 
 # ── System prompt ───────────────────────────────────────────────────────────[...]
