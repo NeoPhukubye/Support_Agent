@@ -2,9 +2,12 @@ import importlib
 import os
 import signal
 import sys
+import time
+from collections import defaultdict
+from functools import wraps
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
@@ -14,15 +17,46 @@ sys.path.insert(0, os.path.dirname(__file__))
 from agent import run_agent, stream_agent
 from config import settings
 from database import _ensure_table_exists, get_ticket, list_tickets
-from logging_config import logger
+from logging_config import logger, log_agent_action
 
 app = FastAPI(title="SupportAI Agent API", version="1.0.0")
 
 
+# ── Rate Limiting ────────────────────────────────────────────────────────────────
+
+_request_counts: dict[str, list[float]] = defaultdict(list)
+
+
+def rate_limit(func):
+    """Simple in-memory rate limiter."""
+    @wraps(func)
+    async def wrapper(request: Request, *args, **kwargs):
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        window_start = now - settings.rate_limit_window
+
+        # Clean old entries
+        _request_counts[client_ip] = [
+            t for t in _request_counts[client_ip] if t > window_start
+        ]
+
+        if len(_request_counts[client_ip]) >= settings.rate_limit_requests:
+            log_agent_action("rate_limit_exceeded", client_ip=client_ip)
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded. Max {settings.rate_limit_requests} requests per {settings.rate_limit_window}s."
+            )
+
+        _request_counts[client_ip].append(now)
+        return await func(request, *args, **kwargs)
+    return wrapper
+
+
 @app.on_event("startup")
 def on_startup():
-    logger.info("Starting SupportAI Agent API v%s", "1.0.0")
+    log_agent_action("api_startup", version="1.0.0")
     _ensure_table_exists()
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,8 +68,8 @@ app.add_middleware(
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
-MAX_MESSAGE_LENGTH = settings.max_message_length   # characters
-MAX_HISTORY_TURNS  = settings.max_history_turns    # message pairs kept
+MAX_MESSAGE_LENGTH = settings.max_message_length
+MAX_HISTORY_TURNS = settings.max_history_turns
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────────
@@ -59,7 +93,6 @@ class ChatRequest(BaseModel):
     @field_validator("history")
     @classmethod
     def trim_history(cls, v):
-        # Keep only the most recent turns to avoid context overflow
         return v[-MAX_HISTORY_TURNS:] if v else []
 
 
@@ -109,10 +142,11 @@ def health():
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
+@rate_limit
+async def chat(request: Request, req: ChatRequest):
     """Standard (non-streaming) chat endpoint."""
+    log_agent_action("chat_request", message_preview=req.message[:50])
     try:
-        logger.info("POST /chat message=%s", req.message[:50])
         history = [{"role": m.role, "content": m.content} for m in req.history]
         result = run_agent(req.message, history)
         return ChatResponse(
@@ -125,7 +159,8 @@ def chat(req: ChatRequest):
 
 
 @app.post("/chat/stream")
-def chat_stream(req: ChatRequest):
+@rate_limit
+async def chat_stream(request: Request, req: ChatRequest):
     """
     Streaming chat endpoint using Server-Sent Events (SSE).
 
@@ -135,28 +170,29 @@ def chat_stream(req: ChatRequest):
       {"type": "done",  "tools_used": ["..."]}
       {"type": "error", "detail": "<message>"}
     """
-    logger.info("POST /chat/stream message=%s", req.message[:50])
+    log_agent_action("chat_stream_request", message_preview=req.message[:50])
     history = [{"role": m.role, "content": m.content} for m in req.history]
     return StreamingResponse(
         stream_agent(req.message, history),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            # disable nginx buffering if behind a proxy
             "X-Accel-Buffering": "no",
         },
     )
 
 
 @app.get("/tickets")
-def get_all_tickets():
-    logger.info("GET /tickets")
+@rate_limit
+async def get_all_tickets(request: Request):
+    log_agent_action("list_tickets_request")
     return list_tickets()
 
 
 @app.get("/tickets/{ticket_id}")
-def get_ticket_by_id(ticket_id: str):
-    logger.info("GET /tickets/%s", ticket_id)
+@rate_limit
+async def get_ticket_by_id(request: Request, ticket_id: str):
+    log_agent_action("get_ticket_request", ticket_id=ticket_id)
     ticket = get_ticket(ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")

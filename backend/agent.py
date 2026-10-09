@@ -5,7 +5,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
 from config import settings
-from logging_config import logger
+from logging_config import logger, log_agent_action, log_tool_call
 from tools import (
     create_support_ticket,
     escalate_to_human,
@@ -81,7 +81,7 @@ def _build_messages(message: str, history: list[dict]) -> list:
 
 def run_agent(message: str, history: list[dict]) -> dict:
     """Run the agent and return the full response + tools used."""
-    logger.info("run_agent message=%s history_len=%d", message[:50], len(history))
+    log_agent_action("run_agent", message_preview=message[:50], history_len=len(history))
     messages = _build_messages(message, history)
     result = agent.invoke({"messages": messages})
     all_messages = result["messages"]
@@ -94,7 +94,7 @@ def run_agent(message: str, history: list[dict]) -> dict:
         elif hasattr(msg, "name") and msg.name:
             tool_calls_used.append(msg.name)
 
-    logger.info("run_agent tools_used=%s", tool_calls_used)
+    log_agent_action("run_agent_complete", tools_used=tool_calls_used)
     return {
         "response": all_messages[-1].content,
         "tools_used": list(dict.fromkeys(tool_calls_used)),
@@ -123,7 +123,7 @@ def stream_agent(message: str, history: list[dict]):
                     name = tc.get("name", "")
                     if name:
                         tool_calls_used.append(name)
-                        logger.info("stream_agent tool=%s", name)
+                        log_tool_call(name)
                         yield f"data: {json.dumps({'type': 'tool', 'name': name})}\n\n"
 
             if (

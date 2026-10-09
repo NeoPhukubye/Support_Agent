@@ -2,15 +2,16 @@ import uuid
 from datetime import datetime, timezone
 
 import boto3
+from botocore.exceptions import ClientError
 
 from config import settings
-from logging_config import logger
+from logging_config import logger, log_agent_action
 
 # ---------------------------------------------------------------------------
 # DynamoDB client
 # ---------------------------------------------------------------------------
 _endpoint = settings.dynamodb_endpoint
-_region   = settings.aws_region
+_region = settings.aws_region
 TABLE_NAME = settings.dynamodb_table
 
 _dynamodb = boto3.resource(
@@ -39,7 +40,7 @@ def _ensure_table_exists():
         BillingMode="PAY_PER_REQUEST",
     )
     _dynamodb.meta.client.get_waiter("table_exists").wait(TableName=TABLE_NAME)
-    print(f"[DB] Created DynamoDB table '{TABLE_NAME}'")
+    log_agent_action("dynamodb_table_created", table_name=TABLE_NAME)
 
 
 # ---------------------------------------------------------------------------
@@ -56,22 +57,22 @@ def create_ticket(
     ticket_id = str(uuid.uuid4())[:8].upper()
     now = datetime.now(timezone.utc).isoformat()
     item = {
-        "id":          ticket_id,
-        "email":       email,
-        "category":    category,
-        "subject":     subject,
+        "id": ticket_id,
+        "email": email,
+        "category": category,
+        "subject": subject,
         "description": description,
-        "priority":    priority,
-        "status":      "open",
-        "resolution":  None,
-        "created_at":  now,
-        "updated_at":  now,
+        "priority": priority,
+        "status": "open",
+        "resolution": None,
+        "created_at": now,
+        "updated_at": now,
     }
     try:
         _get_table().put_item(Item=item)
-        logger.info("Created ticket %s", ticket_id)
-    except Exception:
-        logger.exception("Failed to create ticket")
+        log_agent_action("ticket_created", ticket_id=ticket_id, category=category, priority=priority)
+    except ClientError as exc:
+        logger.exception("Failed to create ticket: %s", exc.response.get("Error", {}).get("Message"))
         raise
     return item
 
@@ -80,8 +81,8 @@ def get_ticket(ticket_id: str) -> dict | None:
     try:
         response = _get_table().get_item(Key={"id": ticket_id.upper()})
         return response.get("Item")
-    except Exception:
-        logger.exception("Failed to get ticket %s", ticket_id)
+    except ClientError as exc:
+        logger.exception("Failed to get ticket %s: %s", ticket_id, exc.response.get("Error", {}).get("Message"))
         raise
 
 
@@ -96,8 +97,8 @@ def list_tickets(email: str | None = None, limit: int = 10, next_token: str | No
         scan_kwargs["ExclusiveStartKey"] = {"id": {"S": next_token}}
     try:
         response = table.scan(**scan_kwargs)
-    except Exception:
-        logger.exception("Failed to list tickets")
+    except ClientError as exc:
+        logger.exception("Failed to list tickets: %s", exc.response.get("Error", {}).get("Message"))
         raise
     items = response.get("Items", [])
     items.sort(key=lambda t: t.get("created_at", ""), reverse=True)
