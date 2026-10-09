@@ -2,7 +2,7 @@
 
 > **AWS Summit Hackathon: From Idea to MVP with Agentic AI**
 
-An intelligent AI customer support agent powered by LangGraph, Groq (LLaMA 3), and a vector knowledge base — architected for AWS Bedrock deployment.
+An intelligent AI customer support agent powered by LangGraph, Amazon Bedrock (Claude 3.5), and a vector knowledge base — architected for AWS production deployment.
 
 ## 🏗️ Architecture
 
@@ -15,7 +15,7 @@ LangGraph ReAct Agent (Bedrock Agents equivalent)
       ↓ ↓ ↓ ↓ ↓
    Tools:
    🔍 search_kb          — ChromaDB vector search (Bedrock Knowledge Base)
-   🎫 create_ticket      — SQLite ticket store (DynamoDB)
+   🎫 create_ticket      — DynamoDB ticket store
    📋 get_ticket_status  — Ticket lookup
    📂 list_my_tickets    — Customer ticket history
    🚨 escalate_to_human  — Human handoff (SES email)
@@ -53,9 +53,9 @@ npm run dev
 | Local | AWS Equivalent |
 |-------|---------------|
 | FastAPI | API Gateway + Lambda |
-| Groq LLaMA 3 | Amazon Bedrock (Claude 3.5) |
+| Bedrock (Claude 3.5) | Amazon Bedrock (Claude 3.5) |
 | ChromaDB | Bedrock Knowledge Bases + OpenSearch |
-| SQLite | Amazon DynamoDB |
+| DynamoDB Local | Amazon DynamoDB |
 | Console mock | Amazon SES |
 | Local server | AWS App Runner / ECS |
 
@@ -66,14 +66,17 @@ support-agent/
 ├── backend/
 │   ├── main.py              # FastAPI app
 │   ├── agent.py             # LangGraph ReAct agent + tools
-│   ├── database.py          # SQLite ticket store
+│   ├── config.py            # Settings & env configuration
+│   ├── database.py          # DynamoDB ticket store
+│   ├── logging_config.py    # Structured logging
 │   └── knowledge_base/
 │       ├── vector_store.py  # ChromaDB semantic search
 │       └── docs/            # FAQ, policies, troubleshooting
 ├── frontend/
 │   └── src/
 │       ├── App.jsx          # React chat UI
-│       └── index.css        # Styling
+│       ├── index.css        # Styling
+│       └── main.jsx         # Entry point
 └── README.md
 ```
 
