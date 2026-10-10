@@ -87,8 +87,18 @@ def get_ticket(ticket_id: str) -> dict | None:
 
 
 def list_tickets(email: str | None = None, limit: int = 10, next_token: str | None = None) -> dict:
+    """List tickets, optionally filtered by email, with pagination support.
+
+    Args:
+        email: If provided, only tickets matching this email are returned.
+        limit: Maximum number of items to return.
+        next_token: Opaque pagination token from a previous response.
+
+    Returns:
+        Dict with keys: items, next_token, count.
+    """
     table = _get_table()
-    scan_kwargs: dict = {}
+    scan_kwargs: dict = {"Limit": limit}
     if email:
         scan_kwargs["FilterExpression"] = (
             boto3.dynamodb.conditions.Attr("email").eq(email)
@@ -102,8 +112,13 @@ def list_tickets(email: str | None = None, limit: int = 10, next_token: str | No
         raise
     items = response.get("Items", [])
     items.sort(key=lambda t: t.get("created_at", ""), reverse=True)
+    last_key = response.get("LastEvaluatedKey")
+    # Return only the id portion of the DynamoDB key as a string token
+    next_token_value = None
+    if last_key and "id" in last_key:
+        next_token_value = last_key["id"].get("S")
     return {
-        "items": items[:limit],
-        "next_token": response.get("LastEvaluatedKey", {}).get("id"),
+        "items": items,
+        "next_token": next_token_value,
         "count": len(items),
     }
