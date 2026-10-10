@@ -1,7 +1,7 @@
 import json
 
 from langchain_aws import ChatBedrockConverse
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
 from config import settings
@@ -79,6 +79,26 @@ def _build_messages(message: str, history: list[dict]) -> list:
     return messages
 
 
+def _extract_tool_calls(messages: list) -> list[str]:
+    """Extract tool call names from a list of LangChain messages.
+
+    Looks at both AIMessage.tool_calls and ToolMessage.name attributes,
+    preserving order and deduplicating consecutive runs of the same tool.
+    """
+    tool_calls_used: list[str] = []
+    for msg in messages:
+        # AIMessage may have pending tool_calls
+        if hasattr(msg, "tool_calls") and msg.tool_calls:
+            for tc in msg.tool_calls:
+                name = tc.get("name", "") if isinstance(tc, dict) else getattr(tc, "name", "")
+                if name:
+                    tool_calls_used.append(name)
+        # ToolMessage carries the name of the tool that produced it
+        elif hasattr(msg, "name") and msg.name and not getattr(msg, "tool_calls", None):
+            tool_calls_used.append(msg.name)
+    return list(dict.fromkeys(tool_calls_used))
+
+
 def run_agent(message: str, history: list[dict]) -> dict:
     """Run the agent and return the full response + tools used."""
     log_agent_action("run_agent", message_preview=message[:50], history_len=len(history))
@@ -86,18 +106,11 @@ def run_agent(message: str, history: list[dict]) -> dict:
     result = agent.invoke({"messages": messages})
     all_messages = result["messages"]
 
-    tool_calls_used = []
-    for msg in all_messages:
-        if hasattr(msg, "tool_calls") and msg.tool_calls:
-            for tc in msg.tool_calls:
-                tool_calls_used.append(tc.get("name", ""))
-        elif hasattr(msg, "name") and msg.name:
-            tool_calls_used.append(msg.name)
-
+    tool_calls_used = _extract_tool_calls(all_messages)
     log_agent_action("run_agent_complete", tools_used=tool_calls_used)
     return {
         "response": all_messages[-1].content,
-        "tools_used": list(dict.fromkeys(tool_calls_used)),
+        "tools_used": tool_calls_used,
     }
 
 
@@ -120,20 +133,13 @@ def stream_agent(message: str, history: list[dict]):
 
             if hasattr(msg_chunk, "tool_calls") and msg_chunk.tool_calls:
                 for tc in msg_chunk.tool_calls:
-                    name = tc.get("name", "")
-                    if name:
+                    name = tc.get("name", "") if isinstance(tc, dict) else getattr(tc, "name", "")
+                    if name and name not in tool_calls_used:
                         tool_calls_used.append(name)
                         log_tool_call(name)
                         yield f"data: {json.dumps({'type': 'tool', 'name': name})}\n\n"
 
-            if (
-                hasattr(msg_chunk, "name")
-                and msg_chunk.name
-                and not getattr(msg_chunk, "tool_calls", None)
-                and msg_chunk.name not in tool_calls_used
-            ):
-                tool_calls_used.append(msg_chunk.name)
-
+            # Stream text tokens from the final assistant message only
             if (
                 hasattr(msg_chunk, "content")
                 and isinstance(msg_chunk.content, str)
