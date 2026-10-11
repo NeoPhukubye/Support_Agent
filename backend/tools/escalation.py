@@ -1,7 +1,8 @@
 import re
 
-from database import create_ticket
 from langchain_core.tools import tool
+
+from database import create_ticket
 from logging_config import log_agent_action
 
 _VALID_URGENCY = {"normal", "urgent"}
