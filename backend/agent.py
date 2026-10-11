@@ -1,11 +1,10 @@
 import json
 
-from langchain_aws import ChatBedrockConverse
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.prebuilt import create_react_agent
-
 from config import settings
-from logging_config import logger, log_agent_action, log_tool_call
+from langchain_aws import ChatBedrockConverse
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langgraph.prebuilt import create_react_agent
+from logging_config import log_agent_action, log_tool_call, logger
 from tools import (
     create_support_ticket,
     escalate_to_human,
