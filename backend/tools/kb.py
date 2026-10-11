@@ -1,6 +1,7 @@
+from langchain_core.tools import tool
+
 from config import settings
 from knowledge_base.vector_store import search_knowledge_base
-from langchain_core.tools import tool
 
 
 @tool
