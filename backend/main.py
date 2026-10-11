@@ -7,7 +7,7 @@ from collections import defaultdict
 from functools import wraps
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from agent import run_agent, stream_agent
 from config import settings
 from database import _ensure_table_exists, get_ticket, list_tickets
-from logging_config import logger, log_agent_action
+from logging_config import log_agent_action, logger
 
 app = FastAPI(title="SupportAI Agent API", version="1.0.0")
 
