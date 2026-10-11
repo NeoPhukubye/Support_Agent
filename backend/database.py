@@ -5,7 +5,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from config import settings
-from logging_config import logger, log_agent_action
+from logging_config import log_agent_action, logger
 
 # ---------------------------------------------------------------------------
 # DynamoDB client
