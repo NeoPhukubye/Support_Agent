@@ -2,7 +2,6 @@ import os
 
 import chromadb
 from chromadb.utils import embedding_functions
-
 from config import settings
 
 DOCS_DIR = os.path.join(os.path.dirname(__file__), "docs")
