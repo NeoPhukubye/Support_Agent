@@ -1,9 +1,7 @@
 import re
 
-from langchain_core.tools import tool
-
-from config import settings
 from database import create_ticket, get_ticket, list_tickets
+from langchain_core.tools import tool
 from logging_config import log_agent_action
 
 _VALID_CATEGORIES = {"billing", "technical", "account", "feature_request", "other", "escalation"}
