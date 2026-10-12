@@ -10,6 +10,14 @@ from main import app
 
 client = TestClient(app)
 
+# Access rate limiter storage for test isolation
+from main import _request_counts
+
+
+def reset_rate_limiter():
+    """Clear in-memory rate limiter state."""
+    _request_counts.clear()
+
 
 def test_root():
     r = client.get("/")
@@ -28,17 +36,20 @@ def test_health():
 
 
 def test_chat_validation():
+    reset_rate_limiter()
     r = client.post("/chat", json={"message": ""})
     assert r.status_code == 422
 
 
 def test_chat_message_too_long():
+    reset_rate_limiter()
     r = client.post("/chat", json={"message": "x" * 2001})
     assert r.status_code == 422
 
 
 def test_chat_history_trimmed():
     """History beyond max_history_turns should be trimmed."""
+    reset_rate_limiter()
     long_history = [{"role": "user", "content": f"msg-{i}"} for i in range(30)]
     with patch("agent.run_agent") as mock_run:
         mock_run.return_value = {"response": "ok", "tools_used": []}
@@ -51,6 +62,7 @@ def test_chat_history_trimmed():
 
 def test_chat_rate_limit_exceeded():
     """Repeated requests from the same client should be rate limited."""
+    reset_rate_limiter()
     for _ in range(61):
         r = client.post("/chat", json={"message": "test"})
         if r.status_code == 429:
@@ -59,11 +71,13 @@ def test_chat_rate_limit_exceeded():
 
 
 def test_get_ticket_not_found():
+    reset_rate_limiter()
     r = client.get("/tickets/DOESNOTEXIST")
     assert r.status_code == 404
 
 
 def test_list_tickets_endpoint():
+    reset_rate_limiter()
     with patch("main.list_tickets") as mock_list:
         mock_list.return_value = {"items": [], "next_token": None, "count": 0}
         r = client.get("/tickets")
