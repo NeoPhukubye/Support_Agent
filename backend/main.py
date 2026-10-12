@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from agent import run_agent, stream_agent
+import agent
 from config import settings
 from database import _ensure_table_exists, get_ticket, list_tickets
 from logging_config import log_agent_action, logger
@@ -148,7 +148,7 @@ async def chat(request: Request, req: ChatRequest):
     log_agent_action("chat_request", message_preview=req.message[:50])
     try:
         history = [{"role": m.role, "content": m.content} for m in req.history]
-        result = run_agent(req.message, history)
+        result = agent.run_agent(req.message, history)
         return ChatResponse(
             response=result["response"],
             tools_used=result["tools_used"],
@@ -173,7 +173,7 @@ async def chat_stream(request: Request, req: ChatRequest):
     log_agent_action("chat_stream_request", message_preview=req.message[:50])
     history = [{"role": m.role, "content": m.content} for m in req.history]
     return StreamingResponse(
-        stream_agent(req.message, history),
+        agent.stream_agent(req.message, history),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -183,14 +183,12 @@ async def chat_stream(request: Request, req: ChatRequest):
 
 
 @app.get("/tickets")
-@rate_limit
 async def get_all_tickets(request: Request):
     log_agent_action("list_tickets_request")
     return list_tickets()
 
 
 @app.get("/tickets/{ticket_id}")
-@rate_limit
 async def get_ticket_by_id(request: Request, ticket_id: str):
     log_agent_action("get_ticket_request", ticket_id=ticket_id)
     ticket = get_ticket(ticket_id)
