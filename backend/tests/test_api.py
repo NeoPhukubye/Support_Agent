@@ -72,8 +72,10 @@ def test_chat_rate_limit_exceeded():
 
 def test_get_ticket_not_found():
     reset_rate_limiter()
-    r = client.get("/tickets/DOESNOTEXIST")
-    assert r.status_code == 404
+    with patch("database._get_table") as mock_table:
+        mock_table.return_value.get_item.return_value = {}
+        r = client.get("/tickets/DOESNOTEXIST")
+        assert r.status_code == 404
 
 
 def test_list_tickets_endpoint():
